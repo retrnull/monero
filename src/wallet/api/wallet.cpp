@@ -584,13 +584,6 @@ bool WalletImpl::recoverFromKeysWithPassword(const std::string &path,
                                  const std::string &viewkey_string,
                                  const std::string &spendkey_string)
 {
-    cryptonote::address_parse_info info;
-    if(!get_account_address_from_str(info, m_wallet->nettype(), address_string))
-    {
-        setStatusError(tr("failed to parse address"));
-        return false;
-    }
-
     // parse optional spend key
     crypto::secret_key spendkey;
     bool has_spendkey = false;
@@ -626,9 +619,28 @@ bool WalletImpl::recoverFromKeysWithPassword(const std::string &path,
       }
       viewkey = *reinterpret_cast<const crypto::secret_key*>(viewkey_data.data());
     }
+
+    bool has_address = true;
+    cryptonote::address_parse_info info;
+    if(address_string.empty())
+    {
+        has_address = false;
+        // the address is only used if a viewkey is specified
+        if(has_viewkey) {
+            setStatusError(tr("failed to parse address"));
+            return false;
+        }
+    }
+    else if(!get_account_address_from_str(info, m_wallet->nettype(), address_string))
+    {
+        setStatusError(tr("failed to parse address"));
+        return false;
+    }
+
+
     // check the spend and view keys match the given address
     crypto::public_key pkey;
-    if(has_spendkey) {
+    if(has_spendkey && has_address) {
         if (!crypto::secret_key_to_public_key(spendkey, pkey)) {
             setStatusError(tr("failed to verify secret spend key"));
             return false;
